@@ -43,10 +43,10 @@ int main() {
         exit(1);
     }
 
-    // 🔥 Wait properly
+    //  Wait properly
     sleep(2);
 
-    // 🔥 Open device
+    //  Open device
     int fd = open("/dev/container_monitor", O_RDWR);
     if (fd < 0) {
         perror("Failed to open device");
@@ -55,10 +55,10 @@ int main() {
 
     struct process_info p;
 
-    // ✅ IMPORTANT: still send host PID (correct for kernel lookup)
+    // IMPORTANT: still send host PID (correct for kernel lookup)
     p.pid = pid;
 
-    // 🔥 LOW limits for guaranteed trigger
+    //  LOW limits for guaranteed trigger
     p.soft_limit = 5;
     p.hard_limit = 10;
 
