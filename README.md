@@ -4,8 +4,8 @@
 Multi-Container Runtime with Kernel Memory Monitoring
 
 ## Team Information
-Team Member 1: Sruthi Vejju [PES1UG24CS472]  
-Team Member 2: Shree Krishna [PES1UG24CS440]
+Team Member 1: Shree Krishna [PES1UG24CS440]  
+Team Member 2: Sruthi Vejju [PES1UG24CS472]
 
 ---
 
