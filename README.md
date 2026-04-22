@@ -37,6 +37,78 @@ The user-space runtime creates isolated container environments using Linux names
 
 ---
 
+## Design and Implementation Details
+
+### Container Isolation
+The runtime uses Linux namespaces to isolate containers:
+- **PID namespace** ensures each container has its own process tree.
+- **UTS namespace** allows separate hostnames.
+- **Mount namespace** isolates filesystem mounts.
+
+Each container uses `chroot()` to create a separate root filesystem and mounts `/proc` inside the container.
+
+---
+
+### Supervisor Architecture
+A long-running supervisor process manages all containers. It:
+- Listens on a UNIX domain socket (`/tmp/engine.sock`)
+- Accepts commands like start, run, stop, ps, and logs
+- Maintains metadata of all containers (PID, state, limits, logs)
+
+The CLI acts as a client and communicates with the supervisor using sockets.
+
+---
+
+### Logging System (Bounded Buffer)
+Container output is captured using pipes and handled using a producer-consumer model:
+- Producer threads read container output
+- A bounded buffer stores log data
+- A consumer thread writes logs to files in `/tmp/container_logs`
+
+This ensures safe and efficient logging without data loss.
+
+---
+
+### Kernel-User Communication
+The user-space runtime communicates with the kernel module using `ioctl`.
+
+- `IOCTL_ADD_PROCESS` registers a container process
+- `IOCTL_REMOVE_PROCESS` removes it when finished
+
+The kernel module tracks processes and monitors memory usage.
+
+---
+
+### Memory Monitoring
+The kernel module periodically checks the RSS (Resident Set Size) of each process.
+
+- If memory exceeds the **soft limit**, a warning is logged
+- If memory exceeds the **hard limit**, the process is killed using `SIGKILL`
+
+This ensures controlled memory usage across containers.
+
+---
+
+### Scheduling Experiment
+Scheduling behavior was demonstrated using CPU-bound processes with different nice values.
+
+Two processes were run with different priorities and observed using system tools like `top`, showing how Linux scheduler allocates CPU time.
+
+---
+
+### Design Decisions
+- Lightweight containerization using namespaces instead of full virtualization
+- Use of UNIX sockets for simple and efficient IPC
+- Bounded buffer for safe multi-threaded logging
+- Kernel module for low-level memory monitoring
+
+---
+
+### Limitations
+- Containers are short-lived and not persistent
+- Limited filesystem isolation compared to full container systems
+- Basic scheduling demonstration without advanced policies
+
 ## 3. Repository Contents
 
 - `engine.c` — user-space runtime / supervisor / CLI
