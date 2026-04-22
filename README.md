@@ -205,23 +205,25 @@ Team Member 2:
   
 ## 11. Demo Screenshots
 
-⚠️ Create a folder named screenshots/ in your repo and place images there.
+## 11. Demo Screenshots
+### 1. Supervisor Running
+![Supervisor](screenshots/01-supervisor.png)
 
-11.1 Supervisor running
+### 2. Multiple Containers Running and ps Output
+![Containers](screenshots/02-containers.png)
 
-11.2 Multiple containers
+### 3. Container Logs Output
+![Logs](screenshots/03-logs.png)
 
-11.3 ps output
+### 4. Limits (Soft, Hard and Kill)
+![Limit](screenshots/04-limit.png)
 
-11.4 Logs output
+### 5. CPU Scheduling Experiment
+![Scheduler](screenshots/05-schedulers.png)
+- The scheduling experiment was demonstrated using two CPU-bound python3 processes with different nice values, observed through top.
 
-11.5 Soft limit warning (dmesg)
-
-11.6 Hard limit kill (dmesg)
-
-11.7 Scheduler experiment
-
-11.8 Clean teardown
+### 6. Clean Teardown (No Running Containers)
+![Cleanup](screenshots/06-cleanup.png)
 
 ## 12. Cleanup
 
