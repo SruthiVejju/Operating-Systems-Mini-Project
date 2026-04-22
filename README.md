@@ -1,11 +1,11 @@
 # Operating Systems - Mini Project
 
 ## Project Title
-**Multi-Container Runtime with Kernel Memory Monitoring**
+Multi-Container Runtime with Kernel Memory Monitoring
 
 ## Team Information
-- **Team Member 1:** Sruthi Vejju [PES1UG24CS472]
-- **Team Member 2:** Shree Krishna [PES1UG24CS440]
+Team Member 1: Sruthi Vejju [PES1UG24CS472]  
+Team Member 2: Shree Krishna [PES1UG24CS440]
 
 ---
 
@@ -13,13 +13,13 @@
 
 This project builds a lightweight Linux container runtime in C with:
 
-- a **long-running supervisor**
-- **multiple containers** running at the same time
-- a **CLI** for container management
-- **bounded-buffer logging**
-- a **Linux kernel module** for RSS-based memory monitoring and enforcement
+- a long-running supervisor
+- multiple containers running at the same time
+- a CLI for container management
+- bounded-buffer logging
+- a Linux kernel module for RSS-based memory monitoring and enforcement
 
-The user-space runtime creates isolated container environments using Linux namespaces and chroot, while the kernel module tracks container processes through `ioctl` and enforces soft and hard memory limits.
+The user-space runtime creates isolated container environments using Linux namespaces and `chroot`, while the kernel module tracks container processes through `ioctl` and enforces soft and hard memory limits.
 
 ---
 
@@ -39,8 +39,6 @@ The user-space runtime creates isolated container environments using Linux names
 
 ## 3. Repository Contents
 
-Expected main files:
-
 - `engine.c` — user-space runtime / supervisor / CLI
 - `monitor.c` — kernel module
 - `monitor_ioctl.h` — shared ioctl definitions
@@ -55,197 +53,169 @@ Expected main files:
 
 Use:
 
-- **Ubuntu 22.04 or 24.04**
-- **VirtualBox VM**
-- **Secure Boot OFF**
+- Ubuntu 22.04 or 24.04
+- VirtualBox VM
+- Secure Boot OFF
 - Kernel headers installed
 
-### Install dependencies
+Install dependencies:
+
 ```bash
 sudo apt update
 sudo apt install -y build-essential dkms linux-headers-$(uname -r)
-```
 
----
+5. Build Instructions
 
-## 5. Build Instructions
+Build the project:
 
-### Build the kernel module
-```bash
 make
-```
 
-### Build the user-space engine
-```bash
-gcc engine.c -o engine
-```
+Build the user-space engine (if needed):
 
-### Clean build files
-```bash
+gcc -pthread -o engine engine.c
+
+Clean build files:
+
 make clean
 rm -f engine mem_test test
-```
+6. Kernel Module Setup
 
----
+Load module:
 
-## 6. Kernel Module Setup
-
-### Load module
-```bash
 sudo insmod monitor.ko
-```
 
-### Verify device
-```bash
-ls /dev/container_monitor
-```
+Verify device:
 
-### Check kernel logs
-```bash
+ls -l /dev/container_monitor
+
+Check kernel logs:
+
 sudo dmesg | tail
-```
 
-### Unload module
-```bash
+Unload module:
+
 sudo rmmod monitor
-```
+7. Running the Project
 
----
+Start the supervisor:
 
-## 7. Running the Project
+sudo ./engine supervisor <base-rootfs>
 
-### Start the supervisor / engine
-```bash
-sudo ./engine
-```
+Example:
 
-### Run a memory stress test inside container
-```bash
-python3 -c "a=[]; [a.append('A'*1000000) for _ in range(50)]"
-```
+sudo ./engine supervisor /
 
-### Check kernel output
-```bash
-sudo dmesg | tail
-```
+Start a container:
 
-Expected kernel output includes messages similar to:
+sudo ./engine start <id> <container-rootfs> <command> [soft_mb] [hard_mb]
 
-- `Added PID: ... | Soft: ... | Hard: ...`
-- `PID ... exceeded SOFT ...`
-- `PID ... exceeded HARD ... -> KILLING`
+Run a one-shot container:
 
----
+sudo ./engine run <id> <container-rootfs> <command> [soft_mb] [hard_mb]
 
-## 8. CLI / Runtime Commands
+Example:
 
-The intended runtime command style is:
+sudo ./engine run c1 / bin/ls
 
-```bash
+List containers:
+
+sudo ./engine ps
+
+View logs:
+
+sudo ./engine logs <id>
+
+Stop container:
+
+sudo ./engine stop <id>
+8. CLI / Runtime Commands
 engine supervisor <base-rootfs>
-engine start <id> <container-rootfs> <command> [--soft-mib N] [--hard-mib N] [--nice N]
-engine run <id> <container-rootfs> <command> [--soft-mib N] [--hard-mib N] [--nice N]
+engine start <id> <container-rootfs> <command> [soft_mb] [hard_mb]
+engine run <id> <container-rootfs> <command> [soft_mb] [hard_mb]
 engine ps
 engine logs <id>
 engine stop <id>
-```
+9. Design Summary
 
----
+User-space side:
 
-## 9. Design Summary
+Creates containers
+Manages lifecycle
+Communicates with kernel using ioctl
+Tracks metadata
+Handles logging and cleanup
 
-### User-space side
-- creates containers
-- manages container lifecycle
-- connects to kernel module using `ioctl`
-- tracks container metadata
-- handles logging and cleanup
+Kernel-side:
 
-### Kernel-side
-- creates `/dev/container_monitor`
-- stores monitored process data
-- checks RSS periodically
-- sends warnings for soft limit
-- kills process for hard limit
+Creates /dev/container_monitor
+Stores process data
+Monitors RSS
+Triggers soft warnings
+Enforces hard limits (kills process)
+10. Team Work Split
 
----
+Team Member 1:
 
-## 10. Team Work Split
+engine.c
+Container creation
+CLI / supervisor
+Rootfs handling
+Namespace setup
+Logging
 
-### Team Member 1
-Responsible for:
-- `engine.c`
-- container creation
-- CLI / supervisor logic
-- rootfs handling
-- namespace setup
-- log handling
+Team Member 2:
 
-### Team Member 2
-Responsible for:
-- `monitor.c`
-- `monitor_ioctl.h`
-- device creation
-- ioctl handling
-- kernel linked list
-- RSS monitoring and enforcement
+monitor.c
+monitor_ioctl.h
+Device creation
+ioctl handling
+Kernel linked list
+Memory monitoring
+11. Demo Screenshots
 
----
+⚠️ Create a folder named screenshots/ in your repo and place images there.
 
-## 11. Demo Checklist
+11.1 Supervisor running
 
-For submission screenshots, include:
+11.2 Multiple containers
 
-- Supervisor running
-- Multiple containers tracked
-- `ps` showing metadata
-- Log output
-- `dmesg` showing soft-limit warning
-- `dmesg` showing hard-limit kill
-- Scheduler experiment output
-- Clean teardown
+11.3 ps output
 
----
+11.4 Logs output
 
-## 12. Cleanup
+11.5 Soft limit warning (dmesg)
 
-Before final submission:
+11.6 Hard limit kill (dmesg)
 
-```bash
+11.7 Scheduler experiment
+
+11.8 Clean teardown
+
+12. Cleanup
 make clean
 rm -f engine mem_test test
 sudo rmmod monitor
-```
+13. Troubleshooting
 
----
+insmod: File exists
+→ Module already loaded:
 
-## 13. Troubleshooting
-
-### `insmod: File exists`
-The module is already loaded. Remove it first:
-```bash
 sudo rmmod monitor
 sudo insmod monitor.ko
-```
 
-### `Permission denied` while pushing to GitHub
-Use a GitHub **Personal Access Token** instead of your password.
+Permission denied (GitHub)
+→ Use Personal Access Token instead of password
 
-### `dmesg: Operation not permitted`
-Use:
-```bash
+dmesg not permitted:
+
 sudo dmesg | tail
-```
+14. Notes
 
----
+This project demonstrates:
 
-## 14. Notes
-
-This project was implemented as part of an Operating Systems mini-project to demonstrate:
-- container isolation
-- kernel-user communication
-- process tracking
-- memory monitoring
-- scheduling behavior
-- resource cleanup
-
+Container isolation using namespaces
+Kernel-user communication using ioctl
+Process monitoring and tracking
+Memory enforcement
+Scheduling behavior
+Proper resource cleanup
