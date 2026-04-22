@@ -226,18 +226,22 @@ Stop container:
 sudo ./engine stop <id>
 ```
 
-## 8. CLI / Runtime Commands
-
- ```bash
+## 8. CLI Commands
+```bash
 engine supervisor <base-rootfs>
-engine start <id> <container-rootfs> <command> [soft_mb] [hard_mb]
-engine run <id> <container-rootfs> <command> [soft_mb] [hard_mb]
+
+engine start <id> <container-rootfs> <command> [--soft-mib N] [--hard-mib N]
+
+engine run <id> <container-rootfs> <command> [--soft-mib N] [--hard-mib N]
+
 engine ps
+
 engine logs <id>
+
 engine stop <id>
 ```
 
-## 10. Design Summary
+## 9. Design Summary
 
 User-space side:
 
