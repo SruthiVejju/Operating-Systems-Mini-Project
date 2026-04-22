@@ -259,6 +259,8 @@ Kernel-side:
 - Triggers soft warnings
 - Enforces hard limits (kills process)
 
+Scheduling behavior was demonstrated using CPU-bound processes with different nice values observed using system tools like top.
+
 ## 10. Team Work Split
 
 Team Member 1:
@@ -278,28 +280,35 @@ Team Member 2:
 - ioctl handling
 - Kernel linked list
 - Memory monitoring
-  
-## 11. Demo Screenshots
 
 ## 11. Demo Screenshots
+
 ### 1. Supervisor Running
 ![Supervisor](screenshots/01-supervisor.png)
 
-### 2. Multiple Containers Running and ps Output
+### 2. Multiple Containers Running
 ![Containers](screenshots/02-containers.png)
 
-### 3. Container Logs Output
-![Logs](screenshots/03-logs.png)
+### 3. Container Metadata
+![PS](screenshots/03-ps.png)
 
-### 4. Limits (Soft, Hard and Kill)
-![Limit](screenshots/04-limit.png)
+### 4. Container Logs Output
+![Logs](screenshots/03-ps.png)
 
-### 5. CPU Scheduling Experiment
-![Scheduler](screenshots/05-schedulers.png)
+### 5. Soft Limit Detection
+![Soft](screenshots/04-limit.png)
+
 - The scheduling experiment was demonstrated using two CPU-bound python3 processes with different nice values, observed through top.
+  
+### 6. Hard Limit Enforcement (Kill)
+![Hard](screenshots/04-limit.png)
 
-### 6. Clean Teardown (No Running Containers)
+### 7. CPU Scheduling Experiment
+![Scheduler](screenshots/05-schedulers.png)
+
+### 8. Clean Teardown
 ![Cleanup](screenshots/06-cleanup.png)
+
 
 ## 12. Cleanup
 
