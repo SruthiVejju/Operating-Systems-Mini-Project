@@ -290,10 +290,10 @@ Team Member 2:
 ![Containers](screenshots/02-containers.png)
 
 ### 3. Container Metadata
-![PS](screenshots/03-ps.png)
+![PS](screenshots/02-containers.png)
 
 ### 4. Container Logs Output
-![Logs](screenshots/03-ps.png)
+![Logs](screenshots/03-logs.png)
 
 ### 5. Soft Limit Detection
 ![Soft](screenshots/04-limit.png)
