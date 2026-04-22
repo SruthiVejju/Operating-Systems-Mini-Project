@@ -9,182 +9,214 @@
 #include <linux/delay.h>
 #include <linux/sched/signal.h>
 #include <linux/mm.h>
+#include <linux/mutex.h>
+#include <linux/pid.h>
 
 #include "monitor_ioctl.h"
 
 #define DEVICE_NAME "container_monitor"
 
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("FINAL Container Monitor");
+MODULE_DESCRIPTION("Container Memory Monitor with Soft/Hard Limits");
 
-// ===================== GLOBALS =====================
-
+/* ===================== GLOBALS ===================== */
 static int major;
-static struct class* cls = NULL;
-static struct device* dev = NULL;
+static struct class  *cls = NULL;
+static struct device *dev = NULL;
 static struct task_struct *monitor_thread;
 
-// ===================== LINKED LIST =====================
-
+/* ===================== LINKED LIST ===================== */
 struct process_node {
     struct process_info data;
+    int soft_warned;
     struct list_head list;
 };
 
 static LIST_HEAD(process_list);
+static DEFINE_MUTEX(list_mutex);
 
-// ===================== DEVICE =====================
+/* ===================== DEVICE ===================== */
+static int dev_open(struct inode *inodep, struct file *filep) { return 0; }
+static int dev_release(struct inode *inodep, struct file *filep) { return 0; }
 
-static int dev_open(struct inode *inodep, struct file *filep) {
-    return 0;
-}
+/* ===================== IOCTL ===================== */
+static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+    struct process_info info;
 
-static int dev_release(struct inode *inodep, struct file *filep) {
-    return 0;
-}
+    if (copy_from_user(&info, (struct process_info __user *)arg, sizeof(info)))
+        return -EFAULT;
 
-// ===================== IOCTL =====================
+    switch (cmd) {
 
-static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
+    case IOCTL_ADD_PROCESS: {
+        struct process_node *node = kmalloc(sizeof(*node), GFP_KERNEL);
+        if (!node) return -ENOMEM;
 
-    switch(cmd) {
+        node->data = info;
+        node->soft_warned = 0;
+        INIT_LIST_HEAD(&node->list);
 
-        case IOCTL_ADD_PROCESS: {
-            struct process_node *new_node;
+        mutex_lock(&list_mutex);
+        list_add_tail(&node->list, &process_list);
+        mutex_unlock(&list_mutex);
 
-            new_node = kmalloc(sizeof(*new_node), GFP_KERNEL);
-            if (!new_node) return -ENOMEM;
+        printk(KERN_INFO "monitor: ADD PID=%d soft=%dMB hard=%dMB\n",
+               info.pid, info.soft_limit, info.hard_limit);
+        break;
+    }
 
-            if (copy_from_user(&new_node->data,
-                               (struct process_info *)arg,
-                               sizeof(struct process_info))) {
-                kfree(new_node);
-                return -EFAULT;
+    case IOCTL_REMOVE_PROCESS: {
+        struct process_node *entry, *tmp;
+
+        mutex_lock(&list_mutex);
+        list_for_each_entry_safe(entry, tmp, &process_list, list) {
+            if (entry->data.pid == info.pid) {
+                list_del(&entry->list);
+                kfree(entry);
+                printk(KERN_INFO "monitor: REMOVE PID=%d\n", info.pid);
+                break;
             }
-
-            INIT_LIST_HEAD(&new_node->list);
-            list_add(&new_node->list, &process_list);
-
-            printk(KERN_INFO "Added PID: %d | Soft: %d | Hard: %d\n",
-                   new_node->data.pid,
-                   new_node->data.soft_limit,
-                   new_node->data.hard_limit);
-
-            break;
         }
+        mutex_unlock(&list_mutex);
+        break;
+    }
 
-        default:
-            return -EINVAL;
+    default:
+        return -EINVAL;
     }
 
     return 0;
 }
 
-// ===================== FILE OPS =====================
-
+/* ===================== FILE OPS ===================== */
 static struct file_operations fops = {
-    .owner = THIS_MODULE,
-    .open = dev_open,
-    .release = dev_release,
+    .owner          = THIS_MODULE,
+    .open           = dev_open,
+    .release        = dev_release,
     .unlocked_ioctl = dev_ioctl,
 };
 
-// ===================== MONITOR THREAD =====================
-
-static int monitor_fn(void *data) {
-
+/* ===================== MONITOR THREAD ===================== */
+static int monitor_fn(void *data)
+{
     while (!kthread_should_stop()) {
 
-        struct process_node *entry;
+        struct process_node *entry, *tmp;
 
-        list_for_each_entry(entry, &process_list, list) {
+        mutex_lock(&list_mutex);
 
-            struct task_struct *container_task;
-            struct task_struct *p;
+        list_for_each_entry_safe(entry, tmp, &process_list, list) {
 
-            container_task = pid_task(find_vpid(entry->data.pid), PIDTYPE_PID);
-            if (!container_task)
+            struct pid *pid_struct;
+            struct task_struct *task;
+            unsigned long rss_mb;
+
+            pid_struct = find_get_pid(entry->data.pid);
+            task = get_pid_task(pid_struct, PIDTYPE_PID);
+            put_pid(pid_struct);  // FIX: prevent leak
+
+            if (!task) {
+                printk(KERN_INFO "monitor: PID %d gone\n", entry->data.pid);
+                list_del(&entry->list);
+                kfree(entry);
                 continue;
-
-            // 🔥 iterate all processes
-            for_each_process(p) {
-
-                // Check if process belongs to container (same parent)
-                if (p == container_task || p->real_parent == container_task) {
-
-                    if (!p->mm)
-                        continue;
-
-                    unsigned long rss_pages = get_mm_rss(p->mm);
-                    unsigned long rss_mb = (rss_pages * PAGE_SIZE) / (1024 * 1024);
-
-                    // Soft limit
-                    if (rss_mb > entry->data.soft_limit) {
-                        printk(KERN_WARNING "PID %d exceeded SOFT (%lu MB)\n",
-                               p->pid, rss_mb);
-                    }
-
-                    // Hard limit
-                    if (rss_mb > entry->data.hard_limit) {
-
-                        printk(KERN_ALERT "PID %d exceeded HARD (%lu MB) → KILLING\n",
-                               p->pid, rss_mb);
-
-                        send_sig(SIGKILL, p, 0);
-                    }
-                }
             }
+
+            if (!task->mm) {
+                put_task_struct(task);
+                continue;
+            }
+
+            rss_mb = (get_mm_rss(task->mm) * PAGE_SIZE) >> 20;
+
+            printk(KERN_INFO "monitor: PID=%d RSS=%lu MB\n",
+                   entry->data.pid, rss_mb);
+
+            /* SOFT LIMIT */
+            if (rss_mb > entry->data.soft_limit && !entry->soft_warned) {
+                printk(KERN_WARNING
+                       "monitor: SOFT LIMIT PID=%d (%luMB > %dMB)\n",
+                       entry->data.pid, rss_mb, entry->data.soft_limit);
+                entry->soft_warned = 1;
+            }
+
+            /* HARD LIMIT */
+            if (rss_mb > entry->data.hard_limit) {
+                printk(KERN_ALERT
+                       "monitor: HARD LIMIT PID=%d (%luMB > %dMB) KILLING\n",
+                       entry->data.pid, rss_mb, entry->data.hard_limit);
+
+                send_sig(SIGKILL, task, 0);
+
+                list_del(&entry->list);
+                kfree(entry);
+
+                put_task_struct(task);
+                continue;
+            }
+
+            put_task_struct(task);
         }
 
-        msleep(500);
+        mutex_unlock(&list_mutex);
+
+        ssleep(2);  // faster checking
     }
 
     return 0;
 }
 
-// ===================== INIT =====================
-
-static int __init monitor_init(void) {
-
-    printk(KERN_INFO "FINAL: Module Loaded\n");
-
+/* ===================== INIT ===================== */
+static int __init monitor_init(void)
+{
     major = register_chrdev(0, DEVICE_NAME, &fops);
-    if (major < 0)
-        return major;
+    if (major < 0) return major;
 
     cls = class_create(DEVICE_NAME);
-    if (IS_ERR(cls))
+    if (IS_ERR(cls)) {
+        unregister_chrdev(major, DEVICE_NAME);
         return PTR_ERR(cls);
+    }
 
     dev = device_create(cls, NULL, MKDEV(major, 0), NULL, DEVICE_NAME);
-    if (IS_ERR(dev))
+    if (IS_ERR(dev)) {
+        class_destroy(cls);
+        unregister_chrdev(major, DEVICE_NAME);
         return PTR_ERR(dev);
+    }
 
-    monitor_thread = kthread_run(monitor_fn, NULL, "monitor_thread");
+    monitor_thread = kthread_run(monitor_fn, NULL, "container_monitor");
+    if (IS_ERR(monitor_thread)) {
+        device_destroy(cls, MKDEV(major, 0));
+        class_destroy(cls);
+        unregister_chrdev(major, DEVICE_NAME);
+        return PTR_ERR(monitor_thread);
+    }
 
-    printk(KERN_INFO "Monitoring thread started\n");
+    printk(KERN_INFO "monitor: LOADED\n");
     return 0;
 }
 
-// ===================== EXIT =====================
-
-static void __exit monitor_exit(void) {
-
+/* ===================== EXIT ===================== */
+static void __exit monitor_exit(void)
+{
     struct process_node *entry, *tmp;
 
-    if (monitor_thread)
-        kthread_stop(monitor_thread);
+    kthread_stop(monitor_thread);
 
+    mutex_lock(&list_mutex);
     list_for_each_entry_safe(entry, tmp, &process_list, list) {
         list_del(&entry->list);
         kfree(entry);
     }
+    mutex_unlock(&list_mutex);
 
     device_destroy(cls, MKDEV(major, 0));
     class_destroy(cls);
     unregister_chrdev(major, DEVICE_NAME);
 
-    printk(KERN_INFO "FINAL: Module Unloaded\n");
+    printk(KERN_INFO "monitor: UNLOADED\n");
 }
 
 module_init(monitor_init);
