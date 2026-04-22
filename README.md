@@ -63,6 +63,7 @@ Install dependencies:
 ```bash
 sudo apt update
 sudo apt install -y build-essential dkms linux-headers-$(uname -r)
+```
 
 ---
 
@@ -72,17 +73,20 @@ Build the project:
 
 ```bash
 make
+```
 
 - Build the user-space engine (if needed):
 
 ```bash
 gcc -pthread -o engine engine.c
+```
 
 - Clean build files:
 
 ```bash
 make clean
 rm -f engine mem_test test
+```
 
 ---
 
@@ -92,34 +96,43 @@ Load module:
 
 ```bash
 sudo insmod monitor.ko
+```
 
 Verify device:
 
+```bash
 ls -l /dev/container_monitor
 
 Check kernel logs:
 
 sudo dmesg | tail
+```
 
 Unload module:
 
+```bash
 sudo rmmod monitor
-7. Running the Project
+```
+---
+
+## 7. Running the Project
 
 Start the supervisor:
 
+```bash
 sudo ./engine supervisor <base-rootfs>
 
 Example:
-
 sudo ./engine supervisor /
 
 Start a container:
 
 sudo ./engine start <id> <container-rootfs> <command> [soft_mb] [hard_mb]
+```
 
 Run a one-shot container:
 
+```bash
 sudo ./engine run <id> <container-rootfs> <command> [soft_mb] [hard_mb]
 
 Example:
@@ -129,58 +142,68 @@ sudo ./engine run c1 / bin/ls
 List containers:
 
 sudo ./engine ps
+```
 
 View logs:
 
+```bash
 sudo ./engine logs <id>
 
 Stop container:
 
 sudo ./engine stop <id>
-8. CLI / Runtime Commands
+```
+
+## 8. CLI / Runtime Commands
+
+ ```bash
 engine supervisor <base-rootfs>
 engine start <id> <container-rootfs> <command> [soft_mb] [hard_mb]
 engine run <id> <container-rootfs> <command> [soft_mb] [hard_mb]
 engine ps
 engine logs <id>
 engine stop <id>
-9. Design Summary
+```
+
+## 10. Design Summary
 
 User-space side:
 
-Creates containers
-Manages lifecycle
-Communicates with kernel using ioctl
-Tracks metadata
-Handles logging and cleanup
+- Creates containers
+- Manages lifecycle
+- Communicates with kernel using ioctl
+- Tracks metadata
+- Handles logging and cleanup
 
 Kernel-side:
 
-Creates /dev/container_monitor
-Stores process data
-Monitors RSS
-Triggers soft warnings
-Enforces hard limits (kills process)
-10. Team Work Split
+- Creates /dev/container_monitor
+- Stores process data
+- Monitors RSS
+- Triggers soft warnings
+- Enforces hard limits (kills process)
+
+## 10. Team Work Split
 
 Team Member 1:
 
-engine.c
-Container creation
-CLI / supervisor
-Rootfs handling
-Namespace setup
-Logging
+- engine.c
+- Container creation
+- CLI / supervisor
+- Rootfs handling
+- Namespace setup
+- Logging
 
 Team Member 2:
 
-monitor.c
-monitor_ioctl.h
-Device creation
-ioctl handling
-Kernel linked list
-Memory monitoring
-11. Demo Screenshots
+- monitor.c
+- monitor_ioctl.h
+- Device creation
+- ioctl handling
+- Kernel linked list
+- Memory monitoring
+  
+## 11. Demo Screenshots
 
 ⚠️ Create a folder named screenshots/ in your repo and place images there.
 
@@ -200,12 +223,17 @@ Memory monitoring
 
 11.8 Clean teardown
 
-12. Cleanup
+## 12. Cleanup
+
+```bash
 make clean
 rm -f engine mem_test test
 sudo rmmod monitor
-13. Troubleshooting
+```
 
+## 14. Troubleshooting
+
+```bash
 insmod: File exists
 → Module already loaded:
 
@@ -218,13 +246,15 @@ Permission denied (GitHub)
 dmesg not permitted:
 
 sudo dmesg | tail
-14. Notes
+```
+
+## 14. Notes
 
 This project demonstrates:
 
-Container isolation using namespaces
-Kernel-user communication using ioctl
-Process monitoring and tracking
-Memory enforcement
-Scheduling behavior
-Proper resource cleanup
+- Container isolation using namespaces
+- Kernel-user communication using ioctl
+- Process monitoring and tracking
+- Memory enforcement
+- Scheduling behavior
+- Proper resource cleanup
