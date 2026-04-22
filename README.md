@@ -64,24 +64,33 @@ Install dependencies:
 sudo apt update
 sudo apt install -y build-essential dkms linux-headers-$(uname -r)
 
-5. Build Instructions
+---
+
+## 5. Build Instructions
 
 Build the project:
 
+```bash
 make
 
-Build the user-space engine (if needed):
+- Build the user-space engine (if needed):
 
+```bash
 gcc -pthread -o engine engine.c
 
-Clean build files:
+- Clean build files:
 
+```bash
 make clean
 rm -f engine mem_test test
-6. Kernel Module Setup
+
+---
+
+## 6. Kernel Module Setup
 
 Load module:
 
+```bash
 sudo insmod monitor.ko
 
 Verify device:
