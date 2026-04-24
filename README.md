@@ -196,9 +196,11 @@ sudo ./engine supervisor <base-rootfs>
 
 Example:
 sudo ./engine supervisor /
+```
 
 Start a container:
 
+```bash
 sudo ./engine start <id> <container-rootfs> <command> [soft_mb] [hard_mb]
 ```
 
@@ -210,9 +212,11 @@ sudo ./engine run <id> <container-rootfs> <command> [soft_mb] [hard_mb]
 Example:
 
 sudo ./engine run c1 / bin/ls
+```
 
 List containers:
 
+```bash
 sudo ./engine ps
 ```
 
@@ -220,9 +224,11 @@ View logs:
 
 ```bash
 sudo ./engine logs <id>
+```
 
 Stop container:
 
+```bash
 sudo ./engine stop <id>
 ```
 
