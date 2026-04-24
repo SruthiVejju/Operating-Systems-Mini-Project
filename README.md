@@ -227,12 +227,13 @@ sudo ./engine stop <id>
 ```
 
 ## 8. CLI Commands
+
 ```bash
 engine supervisor <base-rootfs>
 
-engine start <id> <container-rootfs> <command> [--soft-mib N] [--hard-mib N]
+engine start <id> <container-rootfs> <command> [soft_mb] [hard_mb]
 
-engine run <id> <container-rootfs> <command> [--soft-mib N] [--hard-mib N]
+engine run <id> <container-rootfs> <command> [soft_mb] [hard_mb]
 
 engine ps
 
@@ -240,6 +241,8 @@ engine logs <id>
 
 engine stop <id>
 ```
+
+Note: Memory limits are provided as positional arguments (soft_mb and hard_mb) instead of flags.
 
 ## 9. Design Summary
 
